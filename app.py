@@ -8,7 +8,7 @@ st.set_page_config(page_title="Fermionic Lattice Model", layout="wide")
 st.title(r"2-Component Fermionic Lattice Model")
 st.markdown(r"""
 This app calculates the probabilities $P_i$ and the Entropy $S$ of a 2-component fermionic system 
-in a grand canonical ensemble.
+in a grand canonical ensemble. 4 configurations are considered with energy E0=E1=0, E2=U, E3=g+U. Band gap g=1 is the energy scale here. 
 """)
 
 # Sidebar for user inputs
