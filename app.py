@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="Fermion Lattice Refrigeration", layout="wide")
 
 st.title(r"Fermionic Lattice: Entropy & Refrigeration")
-st.markdown("Analyze the thermodynamics of a 2-component fermionic system.")
+st.markdown("2-component fermionic lattice. We consider 4 configurations with 0, 1, 2, 3 fermions, energy E0=E1=0, E2=U, E3=g+U and probbility P1...P4. Band gap g=1 sets the energy scale.")
 
 # Sidebar for interactive controls
 st.sidebar.header("Global Parameters")
