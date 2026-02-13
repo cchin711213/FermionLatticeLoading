@@ -10,25 +10,24 @@ st.markdown("Analyze the thermodynamics of a 2-component fermionic system.")
 
 # Sidebar for interactive controls
 st.sidebar.header("Global Parameters")
-T_user = st.sidebar.slider("Temperature (T)", 0.01, 0.5, 0.05, 0.01)
+T_user = st.sidebar.slider("Temperature (T)", 0.01, 1.0, 0.05, 0.01)
 U_user = st.sidebar.slider("Interaction Energy (U)", -1.0, 1.0, 0.3, 0.05)
 mu_fixed = st.sidebar.slider("Fixed Chemical Potential (μ) for S vs T", -0.5, 1.0, 0.5, 0.05)
 
 def calculate_physics(T_input, U_input, mu_input, g=1.0):
     """Calculates state probabilities and entropy for given T, U, and mu."""
-    # Convert inputs to arrays to support broadcasting
     T = np.atleast_1d(np.maximum(T_input, 1e-6))
     mu = np.atleast_1d(mu_input)
     beta = 1.0 / T
     
-    # State data: (Energy E, Particle Number N, Multiplicity deg)
+    # States: (Energy E, Particle Number N, Multiplicity deg)
     states = [(0, 0, 1), (0, 1, 2), (U_input, 2, 1), (g + U_input, 3, 2)]
     
     weights = []
     omegas = []
     for E, N, deg in states:
         omega_i = E - mu * N
-        # Numerical stability: clip the exponent to avoid overflow at low T
+        # Numerical stability: clip the exponent to avoid overflow at very low T
         w = deg * np.exp(np.clip(-beta * omega_i, -500, 500))
         weights.append(w)
         omegas.append(omega_i)
@@ -48,8 +47,8 @@ mu_range = np.linspace(-0.5, 1.0, 300)
 p_mu, s_mu = calculate_physics(T_user, U_user, mu_range)
 
 # --- 2. Calculations for Log-Log T-sweep (Right Column) ---
-T_log_range = np.logspace(np.log10(0.01), np.log10(0.5), 500)
-U_lines = [0.4, 0.2, 0.0]
+T_log_range = np.logspace(np.log10(0.01), np.log10(1.0), 500)
+U_lines = [0.4, 0.0, -0.4]
 s_vs_t_results = {}
 for u_val in U_lines:
     _, s_t = calculate_physics(T_log_range, u_val, mu_fixed)
@@ -81,7 +80,7 @@ with col2:
     st.subheader(f"Log-Log Entropy vs T (at μ = {mu_fixed})")
     fig2, ax3 = plt.subplots(figsize=(8, 6.5))
     
-    colors = ['#d62728', '#2ca02c', '#1f77b4'] # Red=0.4, Green=0.2, Blue=0.0
+    colors = ['#d62728', '#1f77b4', '#2ca02c'] # Red (0.4), Blue (0), Green (-0.4)
     for u_v, color in zip(U_lines, colors):
         ax3.plot(T_log_range, s_vs_t_results[u_v], label=f'U = {u_v}', lw=2.5, color=color)
     
@@ -94,15 +93,8 @@ with col2:
     
     ax3.set_xscale('log')
     ax3.set_yscale('log')
-    ax3.set_xlim(0.01, 0.5)
+    ax3.set_xlim(0.01, 1.0)
     ax3.set_ylim(0.001, 2.0)
     
     ax3.set_xlabel("Temperature $T$ (Log)")
-    ax3.set_ylabel("Entropy $S$ (Log)")
-    ax3.legend()
-    ax3.grid(True, which="both", alpha=0.3)
-    st.pyplot(fig2)
-
-    # Metrics display
-    st.info(f"Thermodynamic metrics for μ = {mu_fixed}")
-    st.write(f"Entropy $S$ at current $U={U_user}$: **{current_s_val:.4f}**")
+    ax3.set_ylabel("
