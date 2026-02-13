@@ -6,6 +6,11 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="Fermion Lattice Refrigeration", layout="wide")
 
 st.title(r"Fermionic Lattice: Entropy & Refrigeration")
+st.markdown(r"""
+Analyze the thermodynamics of a 2-component fermionic system. 
+Use the sidebar to adjust the global temperature and interaction strength for the $\mu$-sweeps, 
+and set a fixed $\mu$ to view the cooling curves on the log-log plot.
+""")
 
 # Sidebar Inputs
 st.sidebar.header("Global Parameters")
@@ -14,17 +19,28 @@ U_user = st.sidebar.slider("Interaction Energy (U)", -1.0, 1.0, 0.3, 0.05)
 mu_fixed = st.sidebar.slider("Fixed Chemical Potential (μ) for S vs T", -0.5, 1.0, 0.5, 0.05)
 
 def calculate_physics(T_input, U_input, mu_input, g=1.0):
-    # Ensure T is positive for log scales and div by zero avoidance
+    """
+    Calculates state probabilities and entropy. 
+    Handles scalars or numpy arrays for T and mu.
+    """
+    # Ensure T and mu are handled as arrays for broadcasting
     T = np.atleast_1d(np.maximum(T_input, 1e-6))
     mu = np.atleast_1d(mu_input)
     beta = 1.0 / T
     
-    states = [(0, 0, 1), (0, 1, 2), (U_input, 2, 1), (g + U_input, 3, 2)]
+    # Outcomes: (Energy E, Particle Number N, Multiplicity deg)
+    states = [
+        (0, 0, 1),      # P0
+        (0, 1, 2),      # P1
+        (U_input, 2, 1),# P2
+        (g + U_input, 3, 2) # P3
+    ]
     
     weights = []
     omegas = []
     for E, N, deg in states:
         omega_i = E - mu * N
+        # Numerical stability: clip the exponent to avoid overflow
         w = deg * np.exp(np.clip(-beta * omega_i, -500, 500))
         weights.append(w)
         omegas.append(omega_i)
@@ -39,25 +55,41 @@ def calculate_physics(T_input, U_input, mu_input, g=1.0):
     
     return probs, entropy
 
-# --- 1. Calculations for the mu-sweep (fixed T) ---
+# --- 1. Calculations for the mu-sweep (Top 2 plots) ---
 mu_range = np.linspace(-0.5, 1.0, 300)
 p_mu, s_mu = calculate_physics(T_user, U_user, mu_range)
 
-# --- 2. Calculations for the Log-Log sweep (fixed mu) ---
+# --- 2. Calculations for the Log-Log T-sweep (Bottom plot) ---
 T_log_range = np.logspace(np.log10(0.01), np.log10(0.5), 500)
-U_lines = [0.4, 0.2, 0.0] # Interaction values including U=0
+U_lines = [0.4, 0.2, 0.0] 
 s_vs_t_results = {}
 for u_val in U_lines:
     _, s_t = calculate_physics(T_log_range, u_val, mu_fixed)
     s_vs_t_results[u_val] = s_t
 
-# --- LAYOUT & PLOTTING ---
+# --- Layout and Visualization ---
 col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader(r"Probabilities & Entropy vs $\mu$")
     fig1, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 10), sharex=True)
     
+    # Plot 1: Probabilities
+    labels = [r'$P_0$ (0 atoms)', r'$P_1$ (1 atom)', r'$P_2$ (2 atoms)', r'$P_3$ (3 atoms)']
     for i in range(4):
-        ax1.plot(mu_range, p_mu[i], label=f'P{i}', lw=2)
-    ax1
+        ax1.plot(mu_range, p_mu[i], label=labels[i], lw=2)
+    ax1.axvline(mu_fixed, color='black', linestyle='--', alpha=0.4, label=f'Fixed μ={mu_fixed}')
+    ax1.set_ylabel("Probability")
+    ax1.legend(loc='upper right', fontsize='small')
+    ax1.grid(True, alpha=0.2)
+    
+    # Plot 2: Entropy vs Mu
+    ax2.plot(mu_range, s_mu, color='purple', lw=2, label='Entropy S')
+    ax2.axvline(mu_fixed, color='black', linestyle='--', alpha=0.4)
+    ax2.set_ylabel(r"Entropy $S$")
+    ax2.set_xlabel(r"Chemical Potential $\mu$")
+    ax2.grid(True, alpha=0.2)
+    st.pyplot(fig1)
+
+with col2:
+    st.subheader(f"Log-Log Entropy vs $T$ at $\mu =
