@@ -2,31 +2,32 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Page config
+# Page configuration
 st.set_page_config(page_title="Fermion Lattice Refrigeration", layout="wide")
 
 st.title(r"Fermionic Lattice: Entropy & Refrigeration")
-st.markdown(r"Analyze the thermodynamics of a 2-component fermionic system.")
+st.markdown("Analyze the thermodynamics of a 2-component fermionic system.")
 
-# Sidebar Inputs
+# Sidebar for interactive controls
 st.sidebar.header("Global Parameters")
 T_user = st.sidebar.slider("Temperature (T)", 0.01, 0.5, 0.05, 0.01)
 U_user = st.sidebar.slider("Interaction Energy (U)", -1.0, 1.0, 0.3, 0.05)
 mu_fixed = st.sidebar.slider("Fixed Chemical Potential (μ) for S vs T", -0.5, 1.0, 0.5, 0.05)
 
 def calculate_physics(T_input, U_input, mu_input, g=1.0):
-    # Ensure T and mu are handled as arrays
+    """Calculates state probabilities and entropy for given T, U, and mu."""
     T = np.atleast_1d(np.maximum(T_input, 1e-6))
     mu = np.atleast_1d(mu_input)
     beta = 1.0 / T
     
-    # Energy, Number, Multiplicity
+    # State data: (Energy, Particles, Multiplicity)
     states = [(0, 0, 1), (0, 1, 2), (U_input, 2, 1), (g + U_input, 3, 2)]
     
     weights = []
     omegas = []
     for E, N, deg in states:
         omega_i = E - mu * N
+        # Numerical stability clip
         w = deg * np.exp(np.clip(-beta * omega_i, -500, 500))
         weights.append(w)
         omegas.append(omega_i)
@@ -41,25 +42,27 @@ def calculate_physics(T_input, U_input, mu_input, g=1.0):
     
     return probs, entropy
 
-# --- 1. Calculations for the mu-sweep (Plots 1 & 2) ---
+# --- Calculations ---
+# 1. Sweep Mu at fixed T
 mu_range = np.linspace(-0.5, 1.0, 300)
 p_mu, s_mu = calculate_physics(T_user, U_user, mu_range)
 
-# --- 2. Calculations for the Log-Log T-sweep (Plot 3) ---
+# 2. Sweep T on Log Scale at fixed Mu
 T_log_range = np.logspace(np.log10(0.01), np.log10(0.5), 500)
-U_lines = [0.4, 0.2, 0.0] 
+U_lines = [0.4, 0.2, 0.0]
 s_vs_t_results = {}
 for u_val in U_lines:
     _, s_t = calculate_physics(T_log_range, u_val, mu_fixed)
     s_vs_t_results[u_val] = s_t
 
-# --- Layout ---
+# --- Plotting ---
 col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader(r"Probabilities & Entropy vs $\mu$")
     fig1, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 10), sharex=True)
     
+    # Probabilities
     labels = [r'$P_0$', r'$P_1$', r'$P_2$', r'$P_3$']
     for i in range(4):
         ax1.plot(mu_range, p_mu[i], label=labels[i], lw=2)
@@ -68,6 +71,7 @@ with col1:
     ax1.legend(loc='upper right')
     ax1.grid(True, alpha=0.2)
     
+    # Entropy vs Mu
     ax2.plot(mu_range, s_mu, color='purple', lw=2)
     ax2.axvline(mu_fixed, color='black', linestyle='--', alpha=0.4)
     ax2.set_ylabel(r"Entropy $S$")
@@ -76,25 +80,29 @@ with col1:
     st.pyplot(fig1)
 
 with col2:
-    # Fixed the Syntax Error by keeping the string on one line
-    st.subheader(f"Log-Log Entropy vs T at mu = {mu_fixed}")
+    st.subheader(f"Log-Log Entropy vs T (at μ = {mu_fixed})")
+    fig2, ax3 = plt.subplots(figsize=(8, 6.5))
     
-    fig2, ax3 = plt.subplots(figsize=(8, 6))
-    colors = ['#d62728', '#2ca02c', '#1f77b4'] 
+    colors = ['#d62728', '#2ca02c', '#1f77b4'] # U=0.4, U=0.2, U=0.0
     for u_v, color in zip(U_lines, colors):
-        ax3.plot(T_log_range, s_vs_t_results[u_v], label=f'U = {u_v}', lw=2, color=color)
+        ax3.plot(T_log_range, s_vs_t_results[u_v], label=f'U = {u_v}', lw=2.5, color=color)
     
-    # Current setting dot
+    # Highlight current selection
     _, current_s = calculate_physics(T_user, U_user, mu_fixed)
-    ax3.scatter([T_user], [current_s], color='black', s=60, zorder=5, label='Current Point')
+    ax3.scatter([T_user], [current_s], color='black', s=80, edgecolors='white', zorder=5, label='Current State')
     
     ax3.set_xscale('log')
     ax3.set_yscale('log')
     ax3.set_xlim(0.01, 0.5)
     ax3.set_ylim(0.01, 2.0)
     
-    ax3.set_xlabel(r"Temperature $T$ (Log)")
-    ax3.set_ylabel(r"Entropy $S$ (Log)")
+    ax3.set_xlabel("Temperature $T$ (Log)")
+    ax3.set_ylabel("Entropy $S$ (Log)")
+    ax3.set_title("Entropy-Temperature Scaling")
     ax3.legend()
     ax3.grid(True, which="both", alpha=0.3)
-    st.pyplot
+    st.pyplot(fig2)
+
+    # Metrics
+    st.info(f"Thermodynamic metrics for μ = {mu_fixed}")
+    st.write(f"Entropy $S$ at current $U={U_user}$: **{float(current_s):.4f}**")
