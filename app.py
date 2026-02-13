@@ -95,7 +95,7 @@ with col2:
     ax3.set_xscale('log')
     ax3.set_yscale('log')
     ax3.set_xlim(0.01, 0.5)
-    ax3.set_ylim(0.01, 2.0)
+    ax3.set_ylim(0.001, 2.0)
     
     ax3.set_xlabel("Temperature $T$ (Log)")
     ax3.set_ylabel("Entropy $S$ (Log)")
